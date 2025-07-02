@@ -1,0 +1,3 @@
+"""
+NotesNest API package.
+"""
