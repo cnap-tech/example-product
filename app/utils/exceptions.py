@@ -2,7 +2,34 @@
 
 from fastapi import HTTPException
 from app.services.auth_service import AuthenticationError
-from app.services.user_service import UserValidationError, UserNotFoundError, PermissionError
+from app.services.user.exceptions import UserValidationError, UserNotFoundError, PermissionError
+
+
+class FriendshipValidationError(Exception):
+    """Exception raised for friendship validation errors."""
+    def __init__(self, message: str, status_code: int = 400):
+        self.message = message
+        self.status_code = status_code
+        super().__init__(self.message)
+
+
+class FriendshipNotFoundError(Exception):
+    """Exception raised when friendship is not found."""
+    def __init__(self, message: str = "Friendship not found", status_code: int = 404):
+        self.message = message
+        self.status_code = status_code
+        super().__init__(self.message)
+
+
+# List of all service exceptions
+SERVICE_EXCEPTIONS = (
+    AuthenticationError, 
+    UserValidationError, 
+    UserNotFoundError, 
+    PermissionError,
+    FriendshipValidationError, 
+    FriendshipNotFoundError
+)
 
 
 def handle_service_exceptions(func):
@@ -18,7 +45,7 @@ def handle_service_exceptions(func):
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except (AuthenticationError, UserValidationError, UserNotFoundError, PermissionError) as e:
+        except SERVICE_EXCEPTIONS as e:
             raise HTTPException(
                 status_code=e.status_code,
                 detail=e.message,
@@ -37,7 +64,7 @@ def convert_service_exception(exception):
     Returns:
         HTTPException: Converted HTTP exception
     """
-    if isinstance(exception, (AuthenticationError, UserValidationError, UserNotFoundError, PermissionError)):
+    if isinstance(exception, SERVICE_EXCEPTIONS):
         headers = {"WWW-Authenticate": "Bearer"} if isinstance(exception, AuthenticationError) else None
         return HTTPException(
             status_code=exception.status_code,
@@ -49,4 +76,44 @@ def convert_service_exception(exception):
         return HTTPException(
             status_code=500,
             detail="Internal server error"
-        ) 
+        )
+
+
+def handle_service_exception_simple(exception):
+    """
+    Simple handler that directly raises HTTPException from service exception.
+    
+    Args:
+        exception: Service exception to convert and raise
+        
+    Raises:
+        HTTPException: Converted HTTP exception
+    """
+    if isinstance(exception, SERVICE_EXCEPTIONS):
+        headers = {"WWW-Authenticate": "Bearer"} if isinstance(exception, AuthenticationError) else None
+        raise HTTPException(
+            status_code=exception.status_code,
+            detail=exception.message,
+            headers=headers
+        )
+    else:
+        # For unexpected exceptions
+        raise HTTPException(
+            status_code=500,
+            detail="Internal server error"
+        )
+
+
+# Unified exception handler for all routers
+def handle_service_exception(exception):
+    """
+    Unified exception handler for all routers.
+    Raises HTTPException with proper status code and message.
+    
+    Args:
+        exception: Service exception to handle
+        
+    Raises:
+        HTTPException: Converted HTTP exception
+    """
+    handle_service_exception_simple(exception) 
