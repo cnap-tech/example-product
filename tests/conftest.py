@@ -101,5 +101,110 @@ def test_admin_token(test_admin_user: User):
     """Create access token for test admin user."""
     return create_access_token(data={"sub": str(test_admin_user.id)})
 
+class TestUserFactory:
+    """Factory for creating test users in tests."""
+    
+    @staticmethod
+    def create_test_user(session: Session, email: str, username: str, name: str = None, role: UserRole = UserRole.USER):
+        """Create a test user with the given parameters."""
+        if name is None:
+            name = username.title()
+            
+        user = User(
+            username=username,
+            email=email,
+            name=name,
+            hashed_password=get_password_hash("testpass123"),
+            role=role,
+            is_active=True,
+            is_email_verified=True
+        )
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+        return user
+
+class AssertionHelpers:
+    """Helper methods for test assertions."""
+    
+    @staticmethod
+    def assert_error_response(response, expected_message: str):
+        """Assert that response contains expected error message."""
+        data = response.json()
+        if "detail" in data:
+            assert expected_message in data["detail"]
+        elif "message" in data:
+            assert expected_message in data["message"]
+        else:
+            # If no detail or message, check if the expected message is anywhere in the response
+            response_text = str(data)
+            assert expected_message in response_text
+
+@pytest.fixture
+def test_users_batch(session: Session):
+    """Create a batch of test users for testing."""
+    users = []
+    for i in range(5):
+        user = TestUserFactory.create_test_user(
+            session, 
+            f"batchuser{i}@test.com", 
+            f"batchuser{i}",
+            f"Batch User {i}"
+        )
+        users.append(user)
+    return users
+
+@pytest.fixture
+def authenticated_users(session: Session):
+    """Create two authenticated users with tokens."""
+    user1 = TestUserFactory.create_test_user(session, "user1@test.com", "user1", "User One")
+    user2 = TestUserFactory.create_test_user(session, "user2@test.com", "user2", "User Two")
+    
+    user1_token = create_access_token(data={"sub": str(user1.id)})
+    user2_token = create_access_token(data={"sub": str(user2.id)})
+    
+    return user1_token, user2_token, user1, user2
+
+@pytest.fixture
+def friendship_scenarios(session: Session):
+    """Create various friendship scenarios for testing."""
+    from app.services.friendship_service import FriendshipService
+    
+    # Create users for scenarios
+    user1 = TestUserFactory.create_test_user(session, "scenario1@test.com", "scenario1", "Scenario User 1")
+    user2 = TestUserFactory.create_test_user(session, "scenario2@test.com", "scenario2", "Scenario User 2")
+    user3 = TestUserFactory.create_test_user(session, "scenario3@test.com", "scenario3", "Scenario User 3")
+    user4 = TestUserFactory.create_test_user(session, "scenario4@test.com", "scenario4", "Scenario User 4")
+    
+    # Create tokens
+    user1_token = create_access_token(data={"sub": str(user1.id)})
+    user2_token = create_access_token(data={"sub": str(user2.id)})
+    user3_token = create_access_token(data={"sub": str(user3.id)})
+    user4_token = create_access_token(data={"sub": str(user4.id)})
+    
+    # Scenario 1: Pending friend request
+    friendship_pending = FriendshipService.send_friend_request(user1.id, user2.id, session)
+    
+    # Scenario 2: Accepted friendship
+    friendship_accepted = FriendshipService.send_friend_request(user3.id, user4.id, session)
+    FriendshipService.respond_to_friend_request(friendship_accepted.id, "accept", user4.id, session)
+    
+    return {
+        "pending_request": {
+            "user1": user1,
+            "user2": user2,
+            "user1_token": user1_token,
+            "user2_token": user2_token,
+            "friendship_id": friendship_pending.id
+        },
+        "accepted_friendship": {
+            "user1": user3,
+            "user2": user4,
+            "user1_token": user3_token,
+            "user2_token": user4_token,
+            "friendship_id": friendship_accepted.id
+        }
+    }
+
 
  

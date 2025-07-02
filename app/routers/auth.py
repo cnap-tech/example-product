@@ -1,16 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlmodel import Session
 from app.models.user import TokenResponse, TokenRefresh
-from app.services import AuthService, AuthenticationError
-from db.database import get_session_for_services
+from app.services import AuthService
+from app.utils.exceptions import handle_service_exception
+from app.dependencies.database import DBSession
 
 router = APIRouter()
 
 @router.post("/token", response_model=TokenResponse)
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
-    session: Session = Depends(get_session_for_services)
+    session = DBSession
 ):
     """
     Authenticate user and return access and refresh tokens.
@@ -31,17 +31,13 @@ async def login(
             password=form_data.password,
             session=session
         )
-    except AuthenticationError as e:
-        raise HTTPException(
-            status_code=e.status_code,
-            detail=e.message,
-            headers={"WWW-Authenticate": "Bearer"}
-        )
+    except Exception as e:
+        handle_service_exception(e)
 
 @router.post("/token/refresh", response_model=TokenResponse)
 async def refresh_token(
     refresh_token_data: TokenRefresh,
-    session: Session = Depends(get_session_for_services)
+    session = DBSession
 ):
     """
     Refresh access and refresh tokens using a valid refresh token.
@@ -61,9 +57,5 @@ async def refresh_token(
             refresh_token=refresh_token_data.refresh_token,
             session=session
         )
-    except AuthenticationError as e:
-        raise HTTPException(
-            status_code=e.status_code,
-            detail=e.message,
-            headers={"WWW-Authenticate": "Bearer"}
-        ) 
+    except Exception as e:
+        handle_service_exception(e) 

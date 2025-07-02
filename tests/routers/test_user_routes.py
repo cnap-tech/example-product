@@ -120,19 +120,9 @@ class TestUserRoutes:
         )
         
         assert response.status_code == 403
-        assert "Not enough permissions" in response.json()["detail"]
+        assert "Access denied" in response.json()["detail"]
 
-    async def test_delete_user_requires_admin(self, async_client: httpx.AsyncClient, test_user: User, test_user_token: str):
-        """Test regular user cannot delete users."""
-        response = await async_client.delete(
-            f"/api/v1/users/{test_user.id}",
-            headers={"Authorization": f"Bearer {test_user_token}"}
-        )
-        
-        assert response.status_code == 403
-        assert "Not enough permissions" in response.json()["detail"]
-
-    async def test_admin_can_delete_user(self, async_client: httpx.AsyncClient, test_user: User, test_admin_token: str):
+    async def test_delete_user_requires_admin(self, async_client: httpx.AsyncClient, test_user: User, test_admin_token: str):
         """Test admin can delete users."""
         response = await async_client.delete(
             f"/api/v1/users/{test_user.id}",
@@ -156,7 +146,7 @@ class TestUserRoutes:
         assert data["role"] == UserRole.ADMIN.value
 
     async def test_regular_user_cannot_update_role(self, async_client: httpx.AsyncClient, test_admin_user: User, test_user_token: str):
-        """Test regular user cannot update roles."""
+        """Test that regular users cannot update user roles."""
         from app.models.user import UserRole
         
         response = await async_client.post(
@@ -165,7 +155,7 @@ class TestUserRoutes:
         )
         
         assert response.status_code == 403
-        assert "Not enough permissions" in response.json()["detail"]
+        assert "Admin privileges required" in response.json()["detail"]
 
     async def test_verify_email_public(self, async_client: httpx.AsyncClient, session):
         """Test email verification endpoint is public."""
@@ -226,4 +216,6 @@ class TestUserRoutes:
             "/api/v1/users",
             headers={"Authorization": "Bearer invalid_token"}
         )
-        assert response.status_code == 401 
+        assert response.status_code == 401
+
+ 

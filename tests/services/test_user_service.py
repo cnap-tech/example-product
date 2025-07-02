@@ -1,11 +1,12 @@
 import pytest
 from sqlmodel import Session
-from app.services.user_service import (
+from app.services.user import (
     UserService, UserValidationError, UserNotFoundError, PermissionError
 )
 from app.models.user import User, UserCreate, UserRole, UserUpdate
 from app.utils.auth import get_password_hash, verify_password
 from datetime import datetime
+from tests.conftest import TestUserFactory
 
 
 class TestUserService:
@@ -190,7 +191,7 @@ class TestUserService:
             UserService.check_user_access_permission(test_user.id, other_user)
         
         assert exc_info.value.status_code == 403
-        assert "Not enough permissions" in exc_info.value.message
+        assert "Access denied" in exc_info.value.message
 
     def test_check_user_access_permission_require_admin(self, test_user: User):
         """Test admin requirement."""
@@ -342,5 +343,5 @@ class TestUserService:
         """Test PermissionError with default values."""
         error = PermissionError()
         
-        assert error.message == "Not enough permissions"
+        assert error.message == "Access denied"
         assert error.status_code == 403 
