@@ -6,6 +6,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 from app.models.user import SQLModel
+from app.models.note import Note, NoteAuthor  # Import note models for migration
 from db.database import DatabaseConfig
 import os
 

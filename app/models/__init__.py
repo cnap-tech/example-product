@@ -5,4 +5,9 @@ from .user import (
 from .friendship import (
     Friendship, FriendshipStatus, FriendRequestCreate, 
     FriendRequestResponse, FriendshipRead, FriendRead, FriendsList
+)
+from .note import (
+    Note, NoteAuthor, NotePrivacy, NoteCreate, NoteUpdate,
+    NoteRead, NoteListItem, NotesListResponse, AuthorInfo,
+    AddAuthorRequest, RemoveAuthorRequest
 ) 

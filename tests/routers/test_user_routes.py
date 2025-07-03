@@ -2,6 +2,8 @@ import pytest
 import json
 import httpx
 from app.models.user import User, UserRole
+from app.utils.auth import create_access_token
+from tests.conftest import TestUserFactory
 
 
 class TestUserRoutes:
@@ -217,5 +219,86 @@ class TestUserRoutes:
             headers={"Authorization": "Bearer invalid_token"}
         )
         assert response.status_code == 401
+
+
+class TestSecurityInputValidation:
+    """Test security-related input validation scenarios."""
+    
+    async def test_sql_injection_attempts(self, async_client: httpx.AsyncClient, session):
+        """Test SQL injection payloads in user input fields."""
+        # Create a user for authentication
+        user = TestUserFactory.create_test_user(session, "sqltest@test.com", "sqluser")
+        token = create_access_token(data={"sub": str(user.id)})
+        headers = {"Authorization": f"Bearer {token}"}
+        
+        # SQL injection payloads to test
+        sql_payloads = [
+            "'; DROP TABLE users; --",
+            "admin'--",
+            "' OR 1=1 --",
+            "'; UPDATE users SET role='admin' WHERE id=1; --",
+            "' UNION SELECT password FROM users --",
+            "') OR '1'='1",
+            "'; INSERT INTO users (username) VALUES ('hacker'); --",
+            "<script>alert('xss')</script>",  # Also test XSS
+            "{{7*7}}",  # Template injection
+            "$(whoami)"  # Command injection
+        ]
+        
+        for payload in sql_payloads:
+            # Test user creation with malicious username
+            response = await async_client.post(
+                "/api/v1/users",
+                json={
+                    "username": payload,
+                    "email": f"test{hash(payload)}@test.com",
+                    "name": "Test User",
+                    "password": "TestPassword123!"
+                }
+            )
+            
+            # Should either succeed (payload properly escaped) or fail with validation error
+            # But never crash with 500 or execute the payload
+            if response.status_code == 200:
+                # If user was created, verify the data was properly escaped
+                user_id = response.json()["id"]
+                
+                # Login as the created user to access their profile
+                login_token = create_access_token(data={"sub": str(user_id)})
+                auth_headers = {"Authorization": f"Bearer {login_token}"}
+                user_response = await async_client.get(f"/api/v1/users/{user_id}", headers=auth_headers)
+                user_data_returned = user_response.json()
+                
+                # Username should contain the payload as literal text, not executed
+                assert payload in user_data_returned["username"]
+                
+                # Clean up - delete the test user
+                await async_client.delete(f"/api/v1/users/{user_id}", headers=headers)
+                
+            elif response.status_code in [422, 400]:
+                # Validation error - acceptable if there are input restrictions
+                assert True
+            else:
+                # Should not return 500 or other error codes indicating execution or crash
+                assert False, f"Unexpected status code {response.status_code} for payload: {payload}"
+            
+            # Test user update with malicious bio
+            response = await async_client.put(
+                f"/api/v1/users/{user.id}",
+                headers=headers,
+                json={"bio": payload}
+            )
+            
+            # Should either succeed (escaped) or fail with validation error
+            if response.status_code == 200:
+                # Verify bio was properly escaped
+                user_response = await async_client.get(f"/api/v1/users/{user.id}", headers=headers)
+                user_data = user_response.json()
+                assert payload in user_data["bio"]
+            elif response.status_code in [422, 400]:
+                # Validation error - acceptable
+                assert True
+            else:
+                assert False, f"Unexpected status code {response.status_code} for bio payload: {payload}"
 
  

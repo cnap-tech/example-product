@@ -3,6 +3,7 @@
 from fastapi import HTTPException
 from app.services.auth_service import AuthenticationError
 from app.services.user.exceptions import UserValidationError, UserNotFoundError, PermissionError
+# Note: Note exceptions inherit from HTTPException and don't need special handling
 
 
 class FriendshipValidationError(Exception):
@@ -21,7 +22,7 @@ class FriendshipNotFoundError(Exception):
         super().__init__(self.message)
 
 
-# List of all service exceptions
+# List of all service exceptions (non-HTTPException types only)
 SERVICE_EXCEPTIONS = (
     AuthenticationError, 
     UserValidationError, 
@@ -29,6 +30,7 @@ SERVICE_EXCEPTIONS = (
     PermissionError,
     FriendshipValidationError, 
     FriendshipNotFoundError
+    # Note: Note exceptions inherit from HTTPException and are handled directly by FastAPI
 )
 
 
@@ -46,9 +48,14 @@ def handle_service_exceptions(func):
         try:
             return func(*args, **kwargs)
         except SERVICE_EXCEPTIONS as e:
+            # Handle HTTPExceptions specially
+            if isinstance(e, HTTPException):
+                raise e
+            # Use getattr to handle both message and detail attributes
+            detail = getattr(e, 'message', getattr(e, 'detail', str(e)))
             raise HTTPException(
                 status_code=e.status_code,
-                detail=e.message,
+                detail=detail,
                 headers={"WWW-Authenticate": "Bearer"} if isinstance(e, AuthenticationError) else None
             )
     return wrapper
@@ -64,11 +71,16 @@ def convert_service_exception(exception):
     Returns:
         HTTPException: Converted HTTP exception
     """
-    if isinstance(exception, SERVICE_EXCEPTIONS):
+    # Note exceptions are already HTTPException instances, just return them
+    if isinstance(exception, HTTPException):
+        return exception
+    elif isinstance(exception, SERVICE_EXCEPTIONS):
         headers = {"WWW-Authenticate": "Bearer"} if isinstance(exception, AuthenticationError) else None
+        # Use getattr to handle both message and detail attributes
+        detail = getattr(exception, 'message', getattr(exception, 'detail', str(exception)))
         return HTTPException(
             status_code=exception.status_code,
-            detail=exception.message,
+            detail=detail,
             headers=headers
         )
     else:
@@ -89,11 +101,16 @@ def handle_service_exception_simple(exception):
     Raises:
         HTTPException: Converted HTTP exception
     """
-    if isinstance(exception, SERVICE_EXCEPTIONS):
+    # Note exceptions are already HTTPException instances, just re-raise them
+    if isinstance(exception, HTTPException):
+        raise exception
+    elif isinstance(exception, SERVICE_EXCEPTIONS):
         headers = {"WWW-Authenticate": "Bearer"} if isinstance(exception, AuthenticationError) else None
+        # Use getattr to handle both message and detail attributes
+        detail = getattr(exception, 'message', getattr(exception, 'detail', str(exception)))
         raise HTTPException(
             status_code=exception.status_code,
-            detail=exception.message,
+            detail=detail,
             headers=headers
         )
     else:

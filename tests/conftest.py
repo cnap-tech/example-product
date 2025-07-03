@@ -7,9 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.main import app
 from app.models.user import User, UserRole
 from app.utils.auth import get_password_hash, create_access_token
+from sqlalchemy import text
 
 # Set test environment variables for PostgreSQL
-os.environ["DATABASE_URL"] = "postgresql://postgres:postgres@localhost:5433/notesnest_test"
+os.environ["DATABASE_URL"] = "postgresql://postgres:your_secure_password_here@localhost:5433/notesnest_test"
 os.environ["JWT_SECRET_KEY"] = "test-secret-key"
 os.environ["JWT_ALGORITHM"] = "HS256"
 os.environ["ACCESS_TOKEN_EXPIRE_MINUTES"] = "30"
@@ -30,19 +31,41 @@ app.dependency_overrides[get_session] = override_get_session
 @pytest.fixture(scope="session", autouse=True)
 def setup_database():
     """Set up database tables once for all tests."""
-    SQLModel.metadata.create_all(get_sync_engine())
+    # Import models to ensure they're registered
+    from app.models.user import User
+    from app.models.friendship import Friendship
+    from app.models.note import Note, NoteAuthor
+    
+    engine = get_sync_engine()
+    SQLModel.metadata.create_all(engine)
     yield
-    # Teardown after all tests
-    SQLModel.metadata.drop_all(get_sync_engine())
+    
+    # Clean teardown after all tests
+    try:
+        SQLModel.metadata.drop_all(engine)
+    except Exception:
+        # If cascade drop fails, use raw SQL
+        with engine.connect() as conn:
+            conn.execute(text("DROP TABLE IF EXISTS note_author CASCADE"))
+            conn.execute(text("DROP TABLE IF EXISTS note CASCADE"))
+            conn.execute(text("DROP TABLE IF EXISTS friendship CASCADE"))
+            conn.execute(text("DROP TABLE IF EXISTS \"user\" CASCADE"))
+            conn.commit()
 
 @pytest.fixture
 def session():
     """Create a clean database session for each test."""
-    # Drop and recreate tables for each test to ensure clean state
-    SQLModel.metadata.drop_all(get_sync_engine())
-    SQLModel.metadata.create_all(get_sync_engine())
+    engine = get_sync_engine()
     
-    with Session(get_sync_engine()) as session:
+    # Clear data without dropping tables
+    with Session(engine) as session:
+        # Delete in proper order to respect foreign keys, using correct table names
+        session.execute(text("DELETE FROM noteauthor"))
+        session.execute(text("DELETE FROM note"))
+        session.execute(text("DELETE FROM friendship"))
+        session.execute(text('DELETE FROM "user"'))
+        session.commit()
+        
         yield session
 
 @pytest.fixture
@@ -114,7 +137,7 @@ class TestUserFactory:
             username=username,
             email=email,
             name=name,
-            hashed_password=get_password_hash("testpass123"),
+            hashed_password=get_password_hash("TestPassword123!"),
             role=role,
             is_active=True,
             is_email_verified=True
@@ -123,6 +146,11 @@ class TestUserFactory:
         session.commit()
         session.refresh(user)
         return user
+
+# Module-level function for easier importing
+def create_test_user(session: Session, email: str, username: str, name: str = None, role: UserRole = UserRole.USER):
+    """Create a test user with the given parameters."""
+    return TestUserFactory.create_test_user(session, email, username, name, role)
 
 class AssertionHelpers:
     """Helper methods for test assertions."""

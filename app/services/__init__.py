@@ -8,6 +8,14 @@ from .user import (
     PermissionError
 )
 from .friendship_service import FriendshipService
+from .note import (
+    NoteService,
+    NoteNotFoundError,
+    NoteAccessDeniedError,
+    NoteValidationError,
+    AuthorNotFoundError,
+    AuthorAlreadyExistsError
+)
 from app.utils.exceptions import FriendshipValidationError, FriendshipNotFoundError
 
 __all__ = [
@@ -19,5 +27,11 @@ __all__ = [
     "PermissionError",
     "FriendshipService",
     "FriendshipValidationError",
-    "FriendshipNotFoundError"
+    "FriendshipNotFoundError",
+    "NoteService",
+    "NoteNotFoundError",
+    "NoteAccessDeniedError",
+    "NoteValidationError",
+    "AuthorNotFoundError",
+    "AuthorAlreadyExistsError"
 ] 
