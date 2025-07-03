@@ -1,0 +1,114 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "notesnest.fullname" . }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "notesnest.app.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.app.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "notesnest.app.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "notesnest.app.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secrets.yaml") . | sha256sum }}
+    spec:
+      {{- include "notesnest.app.securityContext" . | nindent 6 }}
+      containers:
+      - name: notesnest-app
+        image: "{{ .Values.app.image.repository }}:{{ .Values.app.image.tag }}"
+        imagePullPolicy: {{ .Values.app.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.app.container.port }}
+          name: http
+          protocol: TCP
+        env:
+        # Environment variables from ConfigMap
+        - name: JWT_ALGORITHM
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "notesnest.fullname" . }}-config
+              key: JWT_ALGORITHM
+        - name: ACCESS_TOKEN_EXPIRE_MINUTES
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "notesnest.fullname" . }}-config
+              key: ACCESS_TOKEN_EXPIRE_MINUTES
+        - name: REFRESH_TOKEN_EXPIRE_DAYS
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "notesnest.fullname" . }}-config
+              key: REFRESH_TOKEN_EXPIRE_DAYS
+        - name: TESTING
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "notesnest.fullname" . }}-config
+              key: TESTING
+        # Environment variables from Secrets
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "notesnest.fullname" . }}-secrets
+              key: DATABASE_URL
+        - name: JWT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "notesnest.fullname" . }}-secrets
+              key: JWT_SECRET_KEY
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: app-cache
+          mountPath: /app/.cache
+        {{- if .Values.app.livenessProbe }}
+        livenessProbe:
+          {{- toYaml .Values.app.livenessProbe | nindent 10 }}
+        {{- end }}
+        {{- if .Values.app.readinessProbe }}
+        readinessProbe:
+          {{- toYaml .Values.app.readinessProbe | nindent 10 }}
+        {{- end }}
+        resources:
+          {{- toYaml .Values.app.container.resources | nindent 10 }}
+        securityContext:
+          runAsUser: {{ .Values.global.securityContext.runAsUser }}
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: app-cache
+        emptyDir: {}
+      initContainers:
+      {{- if .Values.migration.enabled }}
+      - name: migration
+        image: "{{ .Values.migration.image.repository }}:{{ .Values.migration.image.tag }}"
+        imagePullPolicy: {{ .Values.app.image.pullPolicy }}
+        command: ["alembic", "upgrade", "head"]
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "notesnest.fullname" . }}-secrets
+              key: DATABASE_URL
+        resources:
+          {{- toYaml .Values.migration.resources | nindent 10 }}
+        securityContext:
+          runAsUser: {{ .Values.global.securityContext.runAsUser }}
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+      {{- end }} 

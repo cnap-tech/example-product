@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "notesnest.fullname" . }}-config
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "notesnest.labels" . | nindent 4 }}
+data:
+  # JWT Configuration
+  JWT_ALGORITHM: {{ .Values.app.env.JWT_ALGORITHM | quote }}
+  ACCESS_TOKEN_EXPIRE_MINUTES: {{ .Values.app.env.ACCESS_TOKEN_EXPIRE_MINUTES | quote }}
+  REFRESH_TOKEN_EXPIRE_DAYS: {{ .Values.app.env.REFRESH_TOKEN_EXPIRE_DAYS | quote }}
+  
+  # Application Configuration
+  TESTING: {{ .Values.app.env.TESTING | quote }}
+  
+  # Database Configuration (non-sensitive)
+  POSTGRES_HOST: {{ include "notesnest.postgresql.serviceName" . | quote }}
+  POSTGRES_PORT: "5432" 

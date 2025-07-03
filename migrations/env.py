@@ -44,10 +44,12 @@ async def run_async_migrations() -> None:
     and associate a connection with the context.
 
     """
-
-    connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
+    from sqlalchemy.ext.asyncio import create_async_engine
+    
+    # Use our centralized database configuration instead of alembic.ini
+    database_url = get_url()
+    connectable = create_async_engine(
+        database_url,
         poolclass=pool.NullPool,
     )
 
