@@ -89,6 +89,9 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         ("/api/v1/token", HTTPMethod.POST),              # Login
         ("/api/v1/token/refresh", HTTPMethod.POST),      # Token refresh
         ("/api/v1/users/verify-email/{token}", HTTPMethod.POST),  # Email verification
+        ("/api/v1/notes", HTTPMethod.GET),               # List notes (public)
+        ("/api/v1/notes/{note_id}", HTTPMethod.GET),     # Get note (public if public)
+        ("/api/v1/notes/{note_id}/authors", HTTPMethod.GET),  # Get note authors (public if public)
         ("/docs", HTTPMethod.GET),                       # API docs
         ("/redoc", HTTPMethod.GET),                      # ReDoc docs
         ("/openapi.json", HTTPMethod.GET),               # OpenAPI schema
@@ -107,53 +110,72 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         method = request.method.upper()
         
         # Check if route is public
-        if self._is_public_route(path, method):
+        is_public = self._is_public_route(path, method)
+        
+        # Extract token (for both public and protected routes)
+        token = self._extract_token(request)
+        
+        # For public routes without token, continue without authentication
+        if is_public and not token:
             return await call_next(request)
         
-        # Extract and verify token
-        token = self._extract_token(request)
-        if not token:
+        # For protected routes without token, return unauthorized
+        if not is_public and not token:
             return JSONResponse(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 content={"detail": "Missing authentication token"}
             )
         
-        try:
-            # Verify token and extract user info
-            payload = verify_token(token, TokenType.ACCESS)
-            user_id = payload.get("sub")
-            
-            if not user_id:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid token payload"
-                )
-            
-            # Get user and verify status
-            user = DatabaseUtils.get_user_by_id_sync(user_id)
-            if not user or not user.is_active:
+        # If we have a token (either on public or protected route), try to authenticate
+        if token:
+            try:
+                # Verify token and extract user info
+                payload = verify_token(token, TokenType.ACCESS)
+                user_id = payload.get("sub")
+                
+                if not user_id:
+                    # For public routes, continue without authentication
+                    if is_public:
+                        return await call_next(request)
+                    # For protected routes, return error
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="Invalid token payload"
+                    )
+                
+                # Get user and verify status
+                user = DatabaseUtils.get_user_by_id_sync(user_id)
+                if not user or not user.is_active:
+                    # For public routes, continue without authentication
+                    if is_public:
+                        return await call_next(request)
+                    # For protected routes, return error
+                    return JSONResponse(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        content={"detail": "User account inactive or not found"}
+                    )
+                
+                # Check admin access if required
+                if self._requires_admin(path, method) and user.role != UserRole.ADMIN:
+                    return JSONResponse(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        content={"detail": "Admin access required"}
+                    )
+                
+                # Store user info in request state
+                request.state.user_id = user.id
+                request.state.user = user
+                
+            except Exception as e:
+                logger.error(f"Authentication error: {e}")
+                # For public routes, continue without authentication
+                if is_public:
+                    return await call_next(request)
+                # For protected routes, return error
                 return JSONResponse(
                     status_code=status.HTTP_401_UNAUTHORIZED,
-                    content={"detail": "User account inactive or not found"}
+                    content={"detail": "Invalid or expired token"}
                 )
-            
-            # Check admin access if required
-            if self._requires_admin(path, method) and user.role != UserRole.ADMIN:
-                return JSONResponse(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    content={"detail": "Admin access required"}
-                )
-            
-            # Store user info in request state
-            request.state.user_id = user.id
-            request.state.user = user
-            
-        except Exception as e:
-            logger.error(f"Authentication error: {e}")
-            return JSONResponse(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                content={"detail": "Invalid or expired token"}
-            )
         
         return await call_next(request)
     

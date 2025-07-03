@@ -1,19 +1,22 @@
 # NotesNest
 
-A modern, secure FastAPI application for user management with friendship system, JWT authentication, built with clean architecture principles and comprehensive async support.
+A modern, secure FastAPI application for collaborative note-taking with user management, friendship system, and JWT authentication. Built with clean architecture principles and comprehensive async support.
 
 ## 🚀 Features
 
+- **Notes System**: Create, edit, and share collaborative notes with privacy controls
+- **Author Management**: Add/remove collaborators on notes with granular permissions
 - **User Management**: Complete CRUD operations for user accounts
 - **Friendship System**: Send/accept friend requests, manage friend lists
 - **JWT Authentication**: Secure login with access and refresh tokens
 - **Role-Based Access Control**: User and Admin roles with appropriate permissions
+- **Privacy Controls**: Public and private notes with access control
 - **Email Verification**: Account verification workflow
 - **Password Security**: Strong password requirements and hashing
 - **Soft Deletion**: Safe user removal with recovery options
 - **RESTful API**: Clean, well-documented endpoints
 - **Async Architecture**: Full async support with proper database connection management
-- **Comprehensive Testing**: 142 test cases covering all functionality
+- **Comprehensive Testing**: 176 test cases covering all functionality
 - **Clean Architecture**: Refactored service layer with modular design
 - **Security Middleware**: JWT-based authentication middleware with proper route protection
 - **Unified Exception Handling**: Consistent error responses across all endpoints
@@ -28,84 +31,111 @@ graph TD
         A["FastAPI App<br/>(Async Route Handlers)"] --> B["Auth Router<br/>app/routers/auth.py"]
         A --> C["User Router<br/>app/routers/user.py"]
         A --> D["Friends Router<br/>app/routers/friends.py"]
-        A --> E["Auth Middleware<br/>app/middleware/auth.py"]
+        A --> E["Notes Router<br/>app/routers/notes.py"]
+        A --> F["Auth Middleware<br/>app/middleware/auth.py"]
     end
 
     subgraph "Dependencies Layer"
-        F["Auth Dependencies<br/>app/dependencies/auth.py<br/>(require_auth, require_admin)"]
-        G["Database Dependencies<br/>app/dependencies/database.py<br/>(Simplified Session Management)"]
+        G["Auth Dependencies<br/>app/dependencies/auth.py<br/>(require_auth, require_admin)"]
+        H["Database Dependencies<br/>app/dependencies/database.py<br/>(Simplified Session Management)"]
     end
 
     subgraph "Service Layer"
-        H["AuthService<br/>app/services/auth_service.py"]
-        I["UserService<br/>app/services/user/<br/>(Modular Package)"]
-        J["FriendshipService<br/>app/services/friendship_service.py"]
+        I["AuthService<br/>app/services/auth_service.py"]
+        J["UserService<br/>app/services/user/<br/>(Modular Package)"]
+        K["FriendshipService<br/>app/services/friendship_service.py"]
+        L["NoteService<br/>app/services/note/<br/>(Modular Package)"]
     end
 
     subgraph "User Service Modules"
-        K["CRUD Operations<br/>app/services/user/crud.py"]
-        L["Validation<br/>app/services/user/validation.py"]
-        M["Management<br/>app/services/user/management.py"]
-        N["Exceptions<br/>app/services/user/exceptions.py"]
+        M["CRUD Operations<br/>app/services/user/crud.py"]
+        N["Validation<br/>app/services/user/validation.py"]
+        O["Management<br/>app/services/user/management.py"]
+        P["Exceptions<br/>app/services/user/exceptions.py"]
+    end
+
+    subgraph "Note Service Modules"
+        Q["CRUD Operations<br/>app/services/note/crud.py"]
+        R["Author Management<br/>app/services/note/authors.py"]
+        S["Permissions<br/>app/services/note/permissions.py"]
+        T["Exceptions<br/>app/services/note/exceptions.py"]
     end
 
     subgraph "Database Layer"
-        O["User Model<br/>app/models/user.py"]
-        P["Friendship Model<br/>app/models/friendship.py"]
-        Q["Database Manager<br/>db/database.py<br/>(Sync & Async Engines)"]
-        R["Database Utils<br/>db/utils.py<br/>(Async Helper Methods)"]
+        U["User Model<br/>app/models/user.py"]
+        V["Friendship Model<br/>app/models/friendship.py"]
+        W["Note Model<br/>app/models/note.py"]
+        X["Database Manager<br/>db/database.py<br/>(Sync & Async Engines)"]
+        Y["Database Utils<br/>db/utils.py<br/>(Async Helper Methods)"]
     end
 
     subgraph "Exception Handling"
-        S["Unified Exception Handler<br/>app/utils/exceptions.py<br/>(Standardized Error Responses)"]
+        Z["Unified Exception Handler<br/>app/utils/exceptions.py<br/>(Standardized Error Responses)"]
     end
-
-    B --> F
-    C --> F
-    D --> F
 
     B --> G
     C --> G
     D --> G
+    E --> G
 
     B --> H
-    C --> I
-    D --> J
+    C --> H
+    D --> H
+    E --> H
 
-    I --> K
-    I --> L
-    I --> M
-    I --> N
+    B --> I
+    C --> J
+    D --> K
+    E --> L
 
-    H --> O
-    I --> O
+    J --> M
+    J --> N
     J --> O
     J --> P
 
-    O --> Q
-    P --> Q
-    Q --> R
+    L --> Q
+    L --> R
+    L --> S
+    L --> T
 
-    F --> S
-    B --> S
-    C --> S
-    D --> S
+    I --> U
+    J --> U
+    K --> U
+    K --> V
+    L --> W
+
+    U --> X
+    V --> X
+    W --> X
+    X --> Y
+
+    G --> Z
+    B --> Z
+    C --> Z
+    D --> Z
+    E --> Z
 
     style A fill:#e1f5fe
-    style F fill:#e8f5e8
     style G fill:#e8f5e8
-    style H fill:#f3e5f5
+    style H fill:#e8f5e8
     style I fill:#f3e5f5
     style J fill:#f3e5f5
-    style K fill:#fff9c4
-    style L fill:#fff9c4
+    style K fill:#f3e5f5
+    style L fill:#f3e5f5
     style M fill:#fff9c4
     style N fill:#fff9c4
-    style O fill:#e8f5e8
-    style P fill:#e8f5e8
-    style Q fill:#e8f5e8
-    style R fill:#e8f5e8
-    style S fill:#fff3e0
+    style O fill:#fff9c4
+    style P fill:#fff9c4
+    style Q fill:#fff9c4
+    style R fill:#fff9c4
+    style S fill:#fff9c4
+    style T fill:#fff9c4
+    style U fill:#e8f5e8
+    style V fill:#e8f5e8
+    style W fill:#e8f5e8
+    style X fill:#e8f5e8
+    style Y fill:#e8f5e8
+    style Z fill:#fff3e0
 ```
 
 ### Recent Refactoring Improvements
@@ -115,6 +145,7 @@ graph TD
 - **📦 Modular Service Architecture**: Split large service files into focused modules (CRUD, validation, management)
 - **🔄 Simplified Database Sessions**: Clean dependency injection patterns
 - **🛡️ Enhanced Security**: Improved error messages and consistent access control
+- **📝 Notes System**: Complete collaborative note-taking with author management and privacy controls
 
 ### Async Architecture Benefits
 
@@ -141,22 +172,30 @@ NotesNest/
 │   ├── models/                   # Data models
 │   │   ├── __init__.py
 │   │   ├── user.py              # User model and Pydantic schemas
-│   │   └── friendship.py        # Friendship model and schemas
+│   │   ├── friendship.py        # Friendship model and schemas
+│   │   └── note.py              # Note model and schemas
 │   ├── routers/                  # API route handlers (async)
 │   │   ├── __init__.py
 │   │   ├── auth.py              # Authentication endpoints
 │   │   ├── user.py              # User management endpoints
-│   │   └── friends.py           # Friendship management endpoints
+│   │   ├── friends.py           # Friendship management endpoints
+│   │   └── notes.py             # Notes and collaboration endpoints
 │   ├── services/                 # Business logic layer
 │   │   ├── __init__.py
 │   │   ├── auth_service.py      # Authentication business logic
 │   │   ├── friendship_service.py # Friendship business logic
-│   │   └── user/                # Modular user service package
-│   │       ├── __init__.py      # Unified UserService interface
-│   │       ├── crud.py          # Create, Read, Update, Delete operations
-│   │       ├── validation.py    # Email/username uniqueness validation
-│   │       ├── management.py    # Role updates, permissions, email verification
-│   │       └── exceptions.py    # User-specific exceptions
+│   │   ├── user/                # Modular user service package
+│   │   │   ├── __init__.py      # Unified UserService interface
+│   │   │   ├── crud.py          # Create, Read, Update, Delete operations
+│   │   │   ├── validation.py    # Email/username uniqueness validation
+│   │   │   ├── management.py    # Role updates, permissions, email verification
+│   │   │   └── exceptions.py    # User-specific exceptions
+│   │   └── note/                # Modular note service package
+│   │       ├── __init__.py      # Unified NoteService interface
+│   │       ├── crud.py          # Note CRUD operations
+│   │       ├── authors.py       # Author management
+│   │       ├── permissions.py   # Access control and permissions
+│   │       └── exceptions.py    # Note-specific exceptions
 │   └── utils/                    # Utility functions
 │       ├── auth.py              # Authentication utilities (JWT, hashing)
 │       └── exceptions.py        # Unified exception handling utilities
@@ -169,24 +208,28 @@ NotesNest/
 │   ├── script.py.mako          # Migration script template
 │   └── versions/               # Migration versions
 │       ├── 001_initial.py      # Initial database schema
-│       └── 002_add_friendship_table.py # Friendship system schema
+│       ├── 002_add_friendship_table.py # Friendship system schema
+│       └── 003_add_note_tables.py # Notes and collaboration schema
 ├── tests/                        # Comprehensive test suite (pytest-asyncio)
 │   ├── __init__.py
 │   ├── conftest.py              # Test configuration with async fixtures
-│   ├── models/                  # Model tests (21 tests)
+│   ├── models/                  # Model tests (31 tests)
 │   │   ├── __init__.py
 │   │   ├── test_user.py        # User model tests (8 tests)
-│   │   └── test_friendship.py  # Friendship model tests (13 tests)
-│   ├── routers/                 # Router tests (58 tests)
+│   │   ├── test_friendship.py  # Friendship model tests (13 tests)
+│   │   └── test_note.py        # Note model tests (10 tests)
+│   ├── routers/                 # Router tests (95 tests)
 │   │   ├── __init__.py
-│   │   ├── test_auth_routes.py  # Authentication route tests (19 tests)
-│   │   ├── test_user_routes.py  # User management route tests (16 tests)
-│   │   └── test_friends_routes.py # Friendship route tests (23 tests)
-│   └── services/               # Service tests (63 tests)
-│       ├── __init__.py
-│       ├── test_auth_service.py # Authentication service tests (13 tests)
-│       ├── test_user_service.py # User service tests (30 tests)
-│       └── test_friendship_service.py # Friendship service tests (20 tests)
+│   │   ├── test_auth_routes.py  # Authentication route tests (21 tests)
+│   │   ├── test_user_routes.py  # User management route tests (17 tests)
+│   │   ├── test_friends_routes.py # Friendship route tests (23 tests)
+│   │   └── test_notes_routes.py # Notes route tests (34 tests)
+│   ├── services/               # Service tests (85 tests)
+│   │   ├── __init__.py
+│   │   ├── test_auth_service.py # Authentication service tests (13 tests)
+│   │   ├── test_user_service.py # User service tests (30 tests)
+│   │   └── test_friendship_service.py # Friendship service tests (20 tests)
+│   └── test_integration.py     # Integration tests (15 tests)
 ├── docker-compose.yml           # Docker services configuration
 ├── docker-compose.test.yml      # Test environment configuration
 ├── Dockerfile                   # Application container
@@ -214,7 +257,7 @@ NotesNest/
 
 ### Authentication (Public Routes)
 
-- `POST /api/v1/token` - User login
+- `POST /api/v1/token` - User login (returns access and refresh tokens)
 - `POST /api/v1/token/refresh` - Refresh access token
 
 ### User Management
@@ -237,6 +280,18 @@ NotesNest/
 - `GET /api/v1/friend-requests/sent` - Get sent friend requests (authenticated)
 - `GET /api/v1/friendship-status/{user_id}` - Get friendship status (authenticated)
 - `DELETE /api/v1/friend-requests/cancel/{addressee_id}` - Cancel friend request (authenticated)
+
+### Notes & Collaboration
+
+- `POST /api/v1/notes` - Create a new note (authenticated)
+- `GET /api/v1/notes` - List notes with pagination and filtering (public for public notes)
+- `GET /api/v1/notes/my` - List user's notes (authenticated)
+- `GET /api/v1/notes/{note_id}` - Get specific note (public for public notes)
+- `PUT /api/v1/notes/{note_id}` - Update note (authenticated, authors only)
+- `DELETE /api/v1/notes/{note_id}` - Delete note (authenticated, creator only)
+- `GET /api/v1/notes/{note_id}/authors` - Get note authors (accessible if note is viewable)
+- `POST /api/v1/notes/{note_id}/authors` - Add author to note (authenticated, authors only)
+- `DELETE /api/v1/notes/{note_id}/authors` - Remove author from note (authenticated, authors only)
 
 ### Documentation
 
@@ -318,7 +373,7 @@ docker-compose up --build
 
 ### Comprehensive Test Suite
 
-The application includes a comprehensive async test suite with **142 test cases**:
+The application includes a comprehensive async test suite with **176 test cases**:
 
 ```bash
 # Run all tests with async support
@@ -331,45 +386,60 @@ pytest -v
 pytest --cov=app
 
 # Run specific test categories
-pytest tests/models/          # Model tests (21 tests)
-pytest tests/routers/         # Route tests (58 tests)
-pytest tests/services/        # Service tests (63 tests)
+pytest tests/models/          # Model tests (31 tests)
+pytest tests/routers/         # Route tests (95 tests)
+pytest tests/services/        # Service tests (85 tests)
+pytest tests/test_integration.py # Integration tests (15 tests)
 
 # Run specific test files
-pytest tests/routers/test_auth_routes.py      # Authentication tests (19 tests)
-pytest tests/routers/test_user_routes.py      # User management tests (16 tests)
+pytest tests/routers/test_auth_routes.py      # Authentication tests (21 tests)
+pytest tests/routers/test_user_routes.py      # User management tests (17 tests)
 pytest tests/routers/test_friends_routes.py   # Friendship tests (23 tests)
+pytest tests/routers/test_notes_routes.py     # Notes tests (34 tests)
 pytest tests/services/test_user_service.py    # User service tests (30 tests)
 pytest tests/services/test_friendship_service.py # Friendship service tests (20 tests)
 ```
 
 ### Test Categories
 
-**✅ Model Tests (21 tests):**
+**✅ Model Tests (31 tests):**
 
 - **User Model (8 tests)**: Creation validation, password hashing, CRUD operations, defaults, constraints, JSON fields
 - **Friendship Model (13 tests)**: Friendship creation, validation, status management, relationships
+- **Note Model (10 tests)**: Note creation, validation, privacy controls, author relationships
 
-**✅ Router Tests (58 tests):**
+**✅ Router Tests (95 tests):**
 
-- **Authentication Routes (19 tests)**: Login functionality, token refresh, middleware behavior, protected routes
-- **User Management Routes (16 tests)**: User creation, retrieval, updates, permissions, role management
+- **Authentication Routes (21 tests)**: Login functionality, token refresh, middleware behavior, protected routes, security edge cases
+- **User Management Routes (17 tests)**: User creation, retrieval, updates, permissions, role management, security validation
 - **Friendship Routes (23 tests)**: Friend requests, responses, friend lists, status checking, cancellation
+- **Notes Routes (34 tests)**: Note CRUD, collaboration, author management, privacy controls, concurrent access, large data handling
 
-**✅ Service Tests (63 tests):**
+**✅ Service Tests (85 tests):**
 
 - **Authentication Service (13 tests)**: User authentication, token management, error handling
 - **User Service (30 tests)**: CRUD operations, validation, permissions, role management, email verification
 - **Friendship Service (20 tests)**: Friend request workflow, friend list management, status tracking
+
+**✅ Integration Tests (15 tests):**
+
+- **Complete User Journey (1 test)**: End-to-end workflow from registration to collaboration
+- **Cross-Feature Interactions (3 tests)**: Friends and notes collaboration, permissions, privacy consistency
+- **Error Handling (2 tests)**: Cascading error handling, data consistency
+- **Performance (1 test)**: Bulk operations handling
+- **Critical Scenarios (3 tests)**: Database failures, malformed requests, security edge cases
+- **API Robustness (1 test)**: Response format consistency
 
 ### Test Infrastructure
 
 - **Async Framework**: pytest-asyncio for async test execution
 - **HTTP Client**: httpx.AsyncClient for async API testing
 - **Database**: Separate test database with proper isolation
-- **Fixtures**: Comprehensive async test fixtures for users, tokens, friendships, and database sessions
+- **Fixtures**: Comprehensive async test fixtures for users, tokens, friendships, notes, and database sessions
 - **Coverage**: 100% coverage of all API endpoints and business logic
 - **Modular Testing**: Tests organized by architectural layer (models, routers, services)
+- **Security Testing**: Token manipulation, SQL injection, input validation, concurrent access
+- **Performance Testing**: Large data handling, bulk operations, concurrent operations
 
 ## 🔒 Security Features
 
@@ -380,6 +450,8 @@ pytest tests/services/test_friendship_service.py # Friendship service tests (20 
 - **Role-Based Access Control**: User and Admin permission levels with service-layer enforcement
 - **Input Validation**: Comprehensive data validation with Pydantic
 - **SQL Injection Protection**: SQLModel/SQLAlchemy ORM with parameterized queries
+- **Access Control**: Granular permissions for notes (view, edit, delete, manage authors)
+- **Privacy Controls**: Public/private notes with proper access enforcement
 - **CORS Configuration**: Configurable cross-origin request handling
 - **Environment Security**: Secure credential management with .env files
 - **Session Management**: Proper database session lifecycle management
@@ -404,7 +476,7 @@ pytest tests/services/test_friendship_service.py # Friendship service tests (20 
 ### Error Handling
 
 - **Unified Exception Handler**: Standardized error conversion across all endpoints
-- **Domain-Specific Exceptions**: Custom error types (AuthenticationError, UserValidationError, etc.)
+- **Domain-Specific Exceptions**: Custom error types (AuthenticationError, UserValidationError, NotePermissionError, etc.)
 - **Consistent Responses**: Standardized error format across all endpoints
 - **HTTP Status Codes**: Proper status code usage (200, 400, 401, 403, 404, 422)
 - **Validation**: Multi-layer input validation (Pydantic + service layer)
@@ -415,7 +487,7 @@ pytest tests/services/test_friendship_service.py # Friendship service tests (20 
 - **Connection Management**: Efficient connection pooling with singleton engine pattern
 - **Migrations**: Version-controlled schema changes with Alembic
 - **Session Patterns**: Simplified dependency injection for database sessions
-- **Relationship Management**: Proper foreign key relationships for friendships
+- **Relationship Management**: Proper foreign key relationships for friendships and note authorship
 
 ## 📝 Environment Variables
 
@@ -453,7 +525,7 @@ TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5433/notesnest_test
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes following the async patterns and modular architecture
 4. Run the full test suite (`pytest -v`)
-5. Ensure all 142 tests pass
+5. Ensure all 176 tests pass
 6. Commit your changes (`git commit -m 'Add amazing feature'`)
 7. Push to the branch (`git push origin feature/amazing-feature`)
 8. Open a Pull Request
@@ -462,26 +534,10 @@ TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5433/notesnest_test
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🎯 Roadmap
-
-- [ ] Email service integration with async SMTP
-- [ ] Password reset functionality
-- [ ] User profile pictures with async file handling
-- [ ] API rate limiting middleware
-- [ ] Audit logging with async database writes
-- [ ] Social media authentication (OAuth2)
-- [ ] Advanced user search and filtering
-- [ ] Real-time notifications with WebSockets
-- [ ] Background task processing with Celery
-- [ ] Caching layer with Redis
-- [ ] Friend recommendation system
-- [ ] Group chat functionality
-- [ ] User activity feeds
-
 ## 📞 Support
 
 For questions or support, please open an issue on GitHub.
 
 ---
 
-Built with ❤️ using FastAPI, modern Python async practices, modular architecture, and comprehensive testing (142 tests).
+Built with ❤️ using FastAPI, modern Python async practices, modular architecture, and comprehensive testing (176 tests).
