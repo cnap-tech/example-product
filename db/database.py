@@ -12,14 +12,15 @@ class DatabaseConfig:
     def get_database_url(async_driver: bool = True) -> str:
         """Get database URL based on environment and driver type."""
         if os.getenv("TESTING") == "true":
-            # For tests, use localhost (host machine)
-            base_url = "postgresql://postgres:postgres@localhost:5433/notesnest_test"
+            # For tests, use test database URL
+            base_url = os.getenv("TEST_DATABASE_URL")
+            if not base_url:
+                raise ValueError("TEST_DATABASE_URL environment variable is required when TESTING=true")
         else:
-            # For production/Docker, use container name
-            base_url = os.getenv(
-                "DATABASE_URL",
-                "postgresql://postgres:your_secure_password_here@db:5432/notesnest"
-            )
+            # For production/Docker, require DATABASE_URL to be set
+            base_url = os.getenv("DATABASE_URL")
+            if not base_url:
+                raise ValueError("DATABASE_URL environment variable is required")
         
         # Clean the URL first (remove existing drivers)
         clean_url = base_url.replace("+asyncpg", "").replace("+psycopg2", "")

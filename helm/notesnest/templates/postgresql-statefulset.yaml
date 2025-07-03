@@ -1,0 +1,116 @@
+{{- if .Values.postgresql.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "notesnest.postgresql.fullname" . }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "notesnest.postgresql.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "notesnest.postgresql.serviceName" . }}
+  replicas: {{ .Values.postgresql.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "notesnest.postgresql.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "notesnest.postgresql.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- include "notesnest.postgresql.securityContext" . | nindent 6 }}
+      containers:
+      - name: postgresql
+        image: "{{ .Values.postgresql.image.repository }}:{{ .Values.postgresql.image.tag }}"
+        imagePullPolicy: {{ .Values.postgresql.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.postgresql.container.port }}
+          name: postgresql
+          protocol: TCP
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "notesnest.postgresql.fullname" . }}-secrets
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "notesnest.postgresql.fullname" . }}-secrets
+              key: POSTGRES_PASSWORD
+        - name: POSTGRES_DB
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "notesnest.postgresql.fullname" . }}-secrets
+              key: POSTGRES_DB
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        volumeMounts:
+        - name: postgresql-data
+          mountPath: /var/lib/postgresql/data
+        - name: postgresql-init-scripts
+          mountPath: /docker-entrypoint-initdb.d
+        {{- if .Values.postgresql.livenessProbe }}
+        livenessProbe:
+          {{- toYaml .Values.postgresql.livenessProbe | nindent 10 }}
+        {{- end }}
+        {{- if .Values.postgresql.readinessProbe }}
+        readinessProbe:
+          {{- toYaml .Values.postgresql.readinessProbe | nindent 10 }}
+        {{- end }}
+        resources:
+          {{- toYaml .Values.postgresql.container.resources | nindent 10 }}
+        securityContext:
+          runAsUser: {{ .Values.postgresql.securityContext.runAsUser }}
+          runAsGroup: {{ .Values.postgresql.securityContext.runAsGroup }}
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: false
+          allowPrivilegeEscalation: false
+      volumes:
+      - name: postgresql-init-scripts
+        configMap:
+          name: {{ include "notesnest.postgresql.fullname" . }}-init-scripts
+          defaultMode: 0755
+  {{- if .Values.postgresql.persistence.enabled }}
+  volumeClaimTemplates:
+  - metadata:
+      name: postgresql-data
+      labels:
+        {{- include "notesnest.postgresql.labels" . | nindent 8 }}
+    spec:
+      accessModes:
+      - {{ .Values.postgresql.persistence.accessMode }}
+      {{- if .Values.postgresql.persistence.storageClass }}
+      storageClassName: {{ .Values.postgresql.persistence.storageClass }}
+      {{- end }}
+      resources:
+        requests:
+          storage: {{ .Values.postgresql.persistence.size }}
+  {{- else }}
+      - name: postgresql-data
+        emptyDir: {}
+  {{- end }}
+---
+# ConfigMap for PostgreSQL initialization scripts
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "notesnest.postgresql.fullname" . }}-init-scripts
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "notesnest.postgresql.labels" . | nindent 4 }}
+data:
+  01-init-database.sql: |
+    -- Initialize the NotesNest database
+    -- Create extensions if they don't exist
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+    
+    -- Grant necessary permissions to the user
+    GRANT ALL PRIVILEGES ON DATABASE {{ .Values.postgresql.database.name }} TO {{ .Values.postgresql.database.user }};
+    
+    -- Set default privileges for future tables
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO {{ .Values.postgresql.database.user }};
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO {{ .Values.postgresql.database.user }};
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO {{ .Values.postgresql.database.user }};
+{{- end }} 

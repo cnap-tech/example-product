@@ -106,21 +106,21 @@ class NotesNestAPITester:
         # Test users with proper password requirements
         test_users = [
             {
-                "username": "testuser1",
-                "email": "testuser1@example.com",
-                "name": "Test User 1",
+                "username": "testuser1_new",
+                "email": "testuser1_new@example.com",
+                "name": "Test User 1 New",
                 "password": "SecurePassword123!"
             },
             {
-                "username": "testuser2",
-                "email": "testuser2@example.com", 
-                "name": "Test User 2",
+                "username": "testuser2_new",
+                "email": "testuser2_new@example.com", 
+                "name": "Test User 2 New",
                 "password": "SecurePassword123!"
             },
             {
-                "username": "admin_user",
-                "email": "admin@example.com",
-                "name": "Admin User",
+                "username": "admin_user_new",
+                "email": "admin_new@example.com",
+                "name": "Admin User New",
                 "password": "AdminPassword123!"
             }
         ]
@@ -157,7 +157,7 @@ class NotesNestAPITester:
             response = self.test_endpoint(
                 f"Authentication successful for {username}",
                 "POST",
-                "/api/v1/auth/token",
+                "/api/v1/token",
                 data=login_data,
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
                 expected_status=200

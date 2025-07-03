@@ -1,0 +1,19 @@
+apiVersion: v2
+name: notesnest
+description: A modern, secure FastAPI application for collaborative note-taking with user management, friendship system, and JWT authentication
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+home: https://github.com/your-org/notesnest
+maintainers:
+  - name: NotesNest Team
+    email: team@notesnest.com
+keywords:
+  - notes
+  - collaboration
+  - fastapi
+  - postgresql
+  - jwt
+annotations:
+  category: Collaboration
+  licenses: MIT

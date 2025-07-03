@@ -1,0 +1,237 @@
+# NotesNest Helm Chart Values
+# This file contains the default values for the NotesNest application and PostgreSQL database
+
+# Global settings
+global:
+  # Kubernetes namespace (will be created if it doesn't exist)
+  namespace: notesnest
+  # Image pull policy
+  imagePullPolicy: IfNotPresent
+  # Security context for all pods
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 1000
+
+# Application configuration
+app:
+  # Application image configuration
+  image:
+    repository: notesnest-app
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+
+  # Deployment configuration
+  replicaCount: 3
+
+  # Container configuration
+  container:
+    port: 8000
+    # Resource limits and requests
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 512Mi
+      requests:
+        cpu: 500m
+        memory: 256Mi
+
+  # Environment variables (non-sensitive)
+  env:
+    JWT_ALGORITHM: "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+    REFRESH_TOKEN_EXPIRE_DAYS: "7"
+    TESTING: "false"
+
+  # Secrets configuration (these must be provided during deployment)
+  secrets:
+    # Database connection URL - REQUIRED
+    # Example: postgresql://user:pass@notesnest-postgresql:5432/notesnest
+    databaseUrl: ""
+
+    # JWT secret key - REQUIRED (use: openssl rand -hex 32)
+    jwtSecretKey: ""
+
+    # PostgreSQL credentials - REQUIRED
+    postgresUser: ""
+    postgresPassword: ""
+    postgresDatabase: ""
+
+  # Health checks
+  livenessProbe:
+    httpGet:
+      path: /docs
+      port: 8000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  readinessProbe:
+    httpGet:
+      path: /docs
+      port: 8000
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+# PostgreSQL StatefulSet configuration
+postgresql:
+  # Enable PostgreSQL deployment
+  enabled: true
+
+  # Image configuration
+  image:
+    repository: postgres
+    tag: "16"
+    pullPolicy: IfNotPresent
+
+  # StatefulSet configuration
+  replicaCount: 1
+
+  # Container configuration
+  container:
+    port: 5432
+    # Resource limits and requests
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+      requests:
+        cpu: 500m
+        memory: 512Mi
+
+  # Persistent storage configuration
+  persistence:
+    enabled: true
+    storageClass: "" # Use default storage class
+    size: 10Gi
+    accessMode: ReadWriteOnce
+
+  # Database initialization
+  database:
+    # These values must match app.secrets values
+    name: "notesnest"
+    user: "notesnest_user"
+    # Password will be taken from secrets
+
+  # Security configuration
+  securityContext:
+    runAsUser: 999
+    runAsGroup: 999
+    fsGroup: 999
+
+  # Health checks
+  livenessProbe:
+    exec:
+      command:
+        - /bin/sh
+        - -c
+        - exec pg_isready -U $(POSTGRES_USER) -d $(POSTGRES_DB) -h 127.0.0.1 -p 5432
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+
+  readinessProbe:
+    exec:
+      command:
+        - /bin/sh
+        - -c
+        - exec pg_isready -U $(POSTGRES_USER) -d $(POSTGRES_DB) -h 127.0.0.1 -p 5432
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+# Service configuration
+service:
+  # Application service
+  app:
+    type: ClusterIP
+    port: 80
+    targetPort: 8000
+    annotations: {}
+
+  # PostgreSQL service
+  postgresql:
+    type: ClusterIP
+    port: 5432
+    targetPort: 5432
+    annotations: {}
+
+# Ingress configuration
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: notesnest.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: notesnest-tls
+      hosts:
+        - notesnest.example.com
+
+# Network policies
+networkPolicy:
+  enabled: false
+  # Allow ingress traffic
+  ingress:
+    - from: []
+      ports:
+        - protocol: TCP
+          port: 8000
+  # Allow egress to PostgreSQL
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: notesnest-postgresql
+      ports:
+        - protocol: TCP
+          port: 5432
+
+# Pod disruption budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Horizontal Pod Autoscaler
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# ServiceMonitor for Prometheus monitoring
+monitoring:
+  serviceMonitor:
+    enabled: false
+    namespace: monitoring
+    interval: 30s
+    scrapeTimeout: 10s
+    labels: {}
+
+# Migration job configuration
+migration:
+  enabled: true
+  image:
+    repository: notesnest-app
+    tag: "1.0.0"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  # Migration will run as a Job before app deployment
+  runPolicy: "Before"

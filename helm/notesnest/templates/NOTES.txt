@@ -1,0 +1,78 @@
+🚀 NotesNest has been deployed successfully!
+
+📊 DEPLOYMENT STATUS:
+✅ Application: {{ include "notesnest.fullname" . }} ({{ .Values.app.replicaCount }} replicas)
+{{- if .Values.postgresql.enabled }}
+✅ PostgreSQL: {{ include "notesnest.postgresql.fullname" . }} (StatefulSet with {{ .Values.postgresql.persistence.size }} storage)
+{{- end }}
+
+🌐 ACCESS YOUR APPLICATION:
+{{- if .Values.ingress.enabled }}
+{{- range $host := .Values.ingress.hosts }}
+  {{- range .paths }}
+  🔗 https://{{ $host.host }}{{ .path }}
+  {{- end }}
+{{- end }}
+{{- else if contains "NodePort" .Values.service.app.type }}
+  Get the application URL by running these commands:
+  export NODE_PORT=$(kubectl get --namespace {{ .Values.global.namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "notesnest.fullname" . }}-service)
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Values.global.namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.service.app.type }}
+  NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+        You can watch the status of by running 'kubectl get --namespace {{ .Values.global.namespace }} svc -w {{ include "notesnest.fullname" . }}-service'
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Values.global.namespace }} {{ include "notesnest.fullname" . }}-service --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP:{{ .Values.service.app.port }}
+{{- else if contains "ClusterIP" .Values.service.app.type }}
+  Get the application URL by running these commands:
+  kubectl --namespace {{ .Values.global.namespace }} port-forward svc/{{ include "notesnest.fullname" . }}-service {{ .Values.service.app.port }}:{{ .Values.service.app.port }}
+  echo "Visit http://127.0.0.1:{{ .Values.service.app.port }} to use your application"
+{{- end }}
+
+📚 API DOCUMENTATION:
+  Once accessible, visit these endpoints:
+  • Swagger UI: /docs
+  • ReDoc: /redoc
+  • OpenAPI Schema: /openapi.json
+
+🔐 SECURITY INFORMATION:
+  • All sensitive data is stored in Kubernetes Secrets
+  • PostgreSQL uses persistent storage with StatefulSet
+  • Application runs with non-root security context
+  • Database migrations run automatically via init container
+
+📋 USEFUL COMMANDS:
+  # Check pod status
+  kubectl get pods -n {{ .Values.global.namespace }}
+  
+  # View application logs
+  kubectl logs -n {{ .Values.global.namespace }} -l app.kubernetes.io/component=application
+  
+  # View PostgreSQL logs
+  kubectl logs -n {{ .Values.global.namespace }} -l app.kubernetes.io/component=database
+  
+  # Scale the application
+  kubectl scale deployment {{ include "notesnest.fullname" . }} --replicas=5 -n {{ .Values.global.namespace }}
+
+{{- if .Values.postgresql.persistence.enabled }}
+⚠️  IMPORTANT: PostgreSQL data is persistent. To completely remove all data, you must also delete the PVC:
+  kubectl delete pvc -n {{ .Values.global.namespace }} -l app.kubernetes.io/component=database
+{{- end }}
+
+🔧 MONITORING:
+{{- if .Values.monitoring.serviceMonitor.enabled }}
+  ✅ ServiceMonitor for Prometheus is enabled
+{{- else }}
+  💡 Enable monitoring by setting monitoring.serviceMonitor.enabled=true
+{{- end }}
+
+📈 SCALING:
+{{- if .Values.autoscaling.enabled }}
+  ✅ Horizontal Pod Autoscaler is enabled ({{ .Values.autoscaling.minReplicas }}-{{ .Values.autoscaling.maxReplicas }} replicas)
+{{- else }}
+  💡 Enable autoscaling by setting autoscaling.enabled=true
+{{- end }}
+
+For more information about NotesNest, visit: {{ .Chart.Home }}
+
+Happy note-taking! 📝 

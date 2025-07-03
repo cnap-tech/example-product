@@ -10,8 +10,10 @@ from app.utils.auth import get_password_hash, create_access_token
 from sqlalchemy import text
 
 # Set test environment variables for PostgreSQL
-os.environ["DATABASE_URL"] = "postgresql://postgres:your_secure_password_here@localhost:5433/notesnest_test"
-os.environ["JWT_SECRET_KEY"] = "test-secret-key"
+# Set test environment variables (use secure defaults for testing)
+os.environ["TEST_DATABASE_URL"] = os.getenv("TEST_DATABASE_URL", "postgresql://postgres:postgres@localhost:5433/notesnest_test")
+os.environ["DATABASE_URL"] = os.getenv("TEST_DATABASE_URL", "postgresql://postgres:postgres@localhost:5433/notesnest_test")
+os.environ["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "test-secret-key-for-testing-only")
 os.environ["JWT_ALGORITHM"] = "HS256"
 os.environ["ACCESS_TOKEN_EXPIRE_MINUTES"] = "30"
 os.environ["REFRESH_TOKEN_EXPIRE_DAYS"] = "7"
